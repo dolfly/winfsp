@@ -55,6 +55,7 @@ struct fuse
     int set_create_dir_umask, create_dir_umask;
     int set_uid, uid;
     int set_gid, gid;
+    int add_write_ea_access;
     int rellinks;
     int dothidden;
     unsigned ThreadCount;
@@ -148,6 +149,7 @@ struct fsp_fuse_core_opt_data
         set_create_dir_umask, create_dir_umask,
         set_uid, uid, username_to_uid_result,
         set_gid, gid,
+        add_write_ea_access,
         set_uidmap,
         set_attr_timeout, attr_timeout,
         rellinks,

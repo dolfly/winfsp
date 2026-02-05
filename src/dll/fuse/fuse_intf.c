@@ -545,6 +545,39 @@ static NTSTATUS fsp_fuse_intf_GetFileInfoFunnel(FSP_FILE_SYSTEM *FileSystem,
     return STATUS_SUCCESS;
 }
 
+static VOID fsp_fuse_intf_AddWriteEaAccess(
+    PSECURITY_DESCRIPTOR SecurityDescriptor)
+{
+    BOOL DaclPresent, DaclDefaulted;
+    PACL Acl;
+    ACL_SIZE_INFORMATION AclSizeInfo;
+    PACE_HEADER Ace;
+    PACCESS_MASK AccessMask;
+
+    if (!GetSecurityDescriptorDacl(SecurityDescriptor, &DaclPresent, &Acl, &DaclDefaulted))
+        return;
+    if (0 == Acl)
+        return;
+    if (!GetAclInformation(Acl, &AclSizeInfo, sizeof AclSizeInfo, AclSizeInformation))
+        return;
+
+    for (DWORD I = 0; I < AclSizeInfo.AceCount; I++)
+    {
+        if (!GetAce(Acl, I, &Ace))
+            return;
+
+        if (Ace->AceType == ACCESS_ALLOWED_ACE_TYPE)
+            AccessMask = &((PACCESS_ALLOWED_ACE)Ace)->Mask;
+        else if (Ace->AceType == ACCESS_DENIED_ACE_TYPE)
+            AccessMask = &((PACCESS_DENIED_ACE)Ace)->Mask;
+        else
+            continue;
+
+        if (*AccessMask & FILE_WRITE_DATA)
+            *AccessMask |= FILE_WRITE_EA;
+    }
+}
+
 static NTSTATUS fsp_fuse_intf_GetSecurityEx(FSP_FILE_SYSTEM *FileSystem,
     const char *PosixPath, struct fuse_file_info *fi,
     PUINT32 PFileAttributes,
@@ -578,8 +611,12 @@ static NTSTATUS fsp_fuse_intf_GetSecurityEx(FSP_FILE_SYSTEM *FileSystem,
         }
 
         *PSecurityDescriptorSize = SecurityDescriptorSize;
-        if (0 != SecurityDescriptorBuf)
+        if (0 != SecurityDescriptorBuf) 
+        {
             memcpy(SecurityDescriptorBuf, SecurityDescriptor, SecurityDescriptorSize);
+            if (f->add_write_ea_access)
+                fsp_fuse_intf_AddWriteEaAccess(SecurityDescriptorBuf);
+        }
     }
 
     if (0 != PFileAttributes)
