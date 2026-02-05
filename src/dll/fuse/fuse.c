@@ -119,6 +119,8 @@ static struct fuse_opt fsp_fuse_core_opts[] =
     FUSE_OPT_KEY("GroupName=", 'g'),
     FSP_FUSE_CORE_OPT("--GroupName=", set_gid, 1),
     FUSE_OPT_KEY("--GroupName=", 'g'),
+    
+    FSP_FUSE_CORE_OPT("AddWriteEaAccess", add_write_ea_access, 1),
 
     FUSE_OPT_END,
 };
@@ -902,6 +904,7 @@ FSP_FUSE_API struct fuse *fsp_fuse_new(struct fsp_fuse_env *env,
     f->set_create_dir_umask = opt_data.set_create_dir_umask; f->create_dir_umask = opt_data.create_dir_umask;
     f->set_uid = opt_data.set_uid; f->uid = opt_data.uid;
     f->set_gid = opt_data.set_gid; f->gid = opt_data.gid;
+    f->add_write_ea_access = opt_data.add_write_ea_access;
     f->rellinks = opt_data.rellinks;
     f->dothidden = opt_data.dothidden;
     f->ThreadCount = opt_data.ThreadCount;
