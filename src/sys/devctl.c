@@ -72,6 +72,13 @@ BOOLEAN FspFastIoDeviceControl(
     if (!Result)
         FSP_RETURN();
 
+    if (0 != InputBufferLength &&
+        FSP_FSCTL_DEFAULT_ALIGN_UP(sizeof(FSP_FSCTL_TRANSACT_RSP)) > InputBufferLength)
+        FSP_RETURN(IoStatus->Status = STATUS_INVALID_PARAMETER);
+    if (0 != OutputBufferLength &&
+        FSP_FSCTL_TRANSACT_BUFFER_SIZEMIN > OutputBufferLength)
+        FSP_RETURN(IoStatus->Status = STATUS_BUFFER_TOO_SMALL);
+
     PVOID SystemBuffer = 0;
     if (0 != InputBufferLength || 0 != OutputBufferLength)
     {

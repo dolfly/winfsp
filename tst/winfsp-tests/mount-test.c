@@ -234,6 +234,20 @@ void mount_volume_transact_dotest(PWSTR DeviceName, PWSTR Prefix)
     FSP_FSCTL_TRANSACT_REQ *Request = (PVOID)RequestBuf, *NextRequest;
     FSP_FSCTL_TRANSACT_RSP *Response = (PVOID)ResponseBuf;
 
+    RequestBufSize = 0;
+    Result = FspFsctlTransact(VolumeHandle, ResponseBuf, 1, 0, &RequestBufSize, FALSE);
+    ASSERT(STATUS_INVALID_PARAMETER == Result);
+    RequestBufSize = 0;
+    Result = FspFsctlTransact(VolumeHandle, ResponseBuf, 1, 0, &RequestBufSize, TRUE);
+    ASSERT(STATUS_INVALID_PARAMETER == Result);
+
+    RequestBufSize = FSP_FSCTL_TRANSACT_BUFFER_SIZEMIN - 1;
+    Result = FspFsctlTransact(VolumeHandle, 0, 0, RequestBuf, &RequestBufSize, FALSE);
+    ASSERT(STATUS_BUFFER_TOO_SMALL == Result);
+    RequestBufSize = FSP_FSCTL_TRANSACT_BATCH_BUFFER_SIZEMIN - 1;
+    Result = FspFsctlTransact(VolumeHandle, 0, 0, RequestBuf, &RequestBufSize, TRUE);
+    ASSERT(STATUS_BUFFER_TOO_SMALL == Result);
+
     ResponseBufSize = 0;
     RequestBufSize = sizeof RequestBuf;
     Result = FspFsctlTransact(VolumeHandle, 0, 0, RequestBuf, &RequestBufSize, TRUE);
