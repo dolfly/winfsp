@@ -72,15 +72,24 @@ BOOLEAN FspFastIoDeviceControl(
     if (!Result)
         FSP_RETURN();
 
-#if 0
-    PDEVICE_OBJECT FsctlDeviceObject = DeviceObject;
-    if (!FspDeviceReference(FsctlDeviceObject))
+    PVOID SystemBuffer = 0;
+    if (0 != InputBufferLength || 0 != OutputBufferLength)
     {
-        IoStatus->Status = STATUS_CANCELLED;
-        IoStatus->Information = 0;
-        FSP_RETURN();
+        SystemBuffer = FspAllocNonPaged(
+            InputBufferLength > OutputBufferLength ? InputBufferLength : OutputBufferLength);
+        if (0 == SystemBuffer)
+            FSP_RETURN(Result = FALSE);
+        if (0 != InputBuffer)
+            try
+            {
+                RtlCopyMemory(SystemBuffer, InputBuffer, InputBufferLength);
+            }
+            except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                FspFree(SystemBuffer);
+                FSP_RETURN(Result = FALSE);
+            }
     }
-#endif
 
     ASSERT(0 == IoGetTopLevelIrp());
     IoSetTopLevelIrp((PIRP)FSRTL_FAST_IO_TOP_LEVEL_IRP);
@@ -88,18 +97,28 @@ BOOLEAN FspFastIoDeviceControl(
     IoStatus->Status = FspVolumeFastTransact(
         FileObject->FsContext2,
         IoControlCode,
-        InputBuffer,
+        SystemBuffer,
         InputBufferLength,
-        OutputBuffer,
+        0 != OutputBufferLength ? SystemBuffer : 0,
         OutputBufferLength,
         IoStatus,
         (PIRP)FSRTL_FAST_IO_TOP_LEVEL_IRP);
 
     IoSetTopLevelIrp(0);
 
-#if 0
-    FspDeviceDereference(FsctlDeviceObject);
-#endif
+    if (0 != SystemBuffer)
+    {
+        if (0 != OutputBuffer)
+            try
+            {
+                RtlCopyMemory(OutputBuffer, SystemBuffer, OutputBufferLength);
+            }
+            except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                IoStatus->Status = GetExceptionCode();
+            }
+        FspFree(SystemBuffer);
+    }
 
     FSP_LEAVE_BOOL(
         "%s, FileObject=%p",
