@@ -80,6 +80,7 @@ BOOLEAN FspFastIoDeviceControl(
         FSP_RETURN(IoStatus->Status = STATUS_BUFFER_TOO_SMALL);
 
     PVOID SystemBuffer = 0;
+
     if (0 != InputBufferLength || 0 != OutputBufferLength)
     {
         SystemBuffer = FspAllocNonPaged(
@@ -115,14 +116,15 @@ BOOLEAN FspFastIoDeviceControl(
 
     if (0 != SystemBuffer)
     {
-        if (0 != OutputBuffer)
+        if (NT_SUCCESS(IoStatus->Status) && 0 != OutputBuffer)
             try
             {
-                RtlCopyMemory(OutputBuffer, SystemBuffer, OutputBufferLength);
+                RtlCopyMemory(OutputBuffer, SystemBuffer, IoStatus->Information);
             }
             except (EXCEPTION_EXECUTE_HANDLER)
             {
                 IoStatus->Status = GetExceptionCode();
+                IoStatus->Information = 0;
             }
         FspFree(SystemBuffer);
     }
